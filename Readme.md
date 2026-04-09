@@ -1,5 +1,7 @@
 # Storm
 
+[![CI](https://github.com/ShubhamSarvankar/storm/actions/workflows/ci.yml/badge.svg)](https://github.com/ShubhamSarvankar/storm/actions/workflows/ci.yml)
+
 A production-grade real-time messaging platform built from scratch in TypeScript. Features end-to-end encrypted messaging, JWT authentication with refresh token rotation, role-based access control, WebSocket presence tracking, and a fully automated HTTPS Docker deployment.
 
 **112 tests · 0 vulnerabilities · 4 services · AES-256-GCM encryption · single-command boot**
