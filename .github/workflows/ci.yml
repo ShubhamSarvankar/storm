@@ -37,6 +37,7 @@ jobs:
           --health-retries 5
 
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       NODE_ENV: test
       # MongoDB — used by shared, api, and worker tests
       MONGO_URI: mongodb://admin:StormLocal2026!@localhost:27017/storm_test?authSource=admin
