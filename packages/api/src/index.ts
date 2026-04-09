@@ -16,21 +16,22 @@ async function start(): Promise<void> {
     logger.info({ port: PORT }, 'API service ready');
   });
 
-  async function shutdown(signal: string): Promise<void> {
+  function shutdown(signal: string): void {
     logger.info({ signal }, 'API shutting down');
-    server.close(async () => {
-      try {
-        await disconnectMongo();
-        await disconnectRedis();
-        logger.info('API shutdown complete');
-      } catch (err) {
-        logger.error({ err }, 'Error during API shutdown');
-      } finally {
-        process.exit(0);
-      }
+    server.close(() => {
+      void (async () => {
+        try {
+          await disconnectMongo();
+          await disconnectRedis();
+          logger.info('API shutdown complete');
+        } catch (err) {
+          logger.error({ err }, 'Error during API shutdown');
+        } finally {
+          process.exit(0);
+        }
+      })();
     });
 
-    // Force exit if graceful shutdown takes too long
     setTimeout(() => {
       logger.warn('Forced shutdown after timeout');
       process.exit(1);

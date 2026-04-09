@@ -90,7 +90,7 @@ export async function handleConnection(ws: WebSocket, req: IncomingMessage): Pro
     logger.info({ userId: user.sub, sessionId }, 'Client connected');
 
     ws.on('message', (data) => {
-      void routeMessage(conn!, data.toString());
+      void routeMessage(conn!, (data as Buffer).toString());
     });
 
     ws.on('close', () => {

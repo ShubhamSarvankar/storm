@@ -12,7 +12,7 @@ import {
 const logger = createLogger('auth-service');
 
 const BCRYPT_ROUNDS = 12;
-const ACCESS_TOKEN_SECONDS = 15 * 60;       // 15 minutes
+const ACCESS_TOKEN_SECONDS = 15 * 60;        // 15 minutes
 const REFRESH_TOKEN_SECONDS = 7 * 24 * 3600; // 7 days
 const REFRESH_TOKEN_BYTES = 32;
 

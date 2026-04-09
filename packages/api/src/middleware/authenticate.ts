@@ -1,8 +1,11 @@
 import type { Request, Response, NextFunction } from 'express';
 import { verifyJwt, buildError, ERROR_CODES, type JwtPayload, type Role } from '@storm/shared';
 
-// Augment Express Request to carry the verified JWT payload
+// Augment Express Request to carry the verified JWT payload.
+// The namespace declaration is intentional — this is the only supported way
+// to extend Express's Request interface in TypeScript.
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       user?: JwtPayload;

@@ -1,3 +1,11 @@
+type RedisMock = {
+  set: () => Promise<void>;
+  del: () => Promise<void>;
+  expire: () => Promise<void>;
+  publish: () => Promise<void>;
+  get: () => Promise<null>;
+};
+
 // Mock entry point for @storm/shared used during gateway tests.
 // Re-exports everything except Mongoose models and Redis, which are stubbed
 // to prevent the event loop from hanging when no DB/Redis is running.
@@ -16,7 +24,7 @@ const noop = (): Promise<void> => Promise.resolve();
 
 export const connectRedis = (): void => undefined;
 export const disconnectRedis = noop;
-export const getRedis = () => ({
+export const getRedis = (): RedisMock => ({
   set: noop,
   del: noop,
   expire: noop,

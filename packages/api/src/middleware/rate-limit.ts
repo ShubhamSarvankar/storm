@@ -1,5 +1,5 @@
 import { rateLimit, type Options } from 'express-rate-limit';
-import { RedisStore, type SendCommandFn } from 'rate-limit-redis';
+import { RedisStore, type SendCommandFn, type RedisReply } from 'rate-limit-redis';
 import { getRedis, buildError, ERROR_CODES } from '@storm/shared';
 import type { Request, Response } from 'express';
 
@@ -12,10 +12,9 @@ function rateLimitErrorHandler(_req: Request, res: Response): void {
 function makeLazyStore(prefix: string): Options['store'] {
   let store: RedisStore | null = null;
 
-  const sendCommand: SendCommandFn = async (...args: string[]) => {
+  const sendCommand: SendCommandFn = (...args: string[]) => {
     const redis = getRedis();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return redis.call(...(args as [string, ...string[]])) as any;
+    return redis.call(...(args as [string, ...string[]])) as Promise<RedisReply>;
   };
 
   return {

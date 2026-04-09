@@ -27,11 +27,11 @@ export interface ChannelView {
 
 function toView(channel: InstanceType<typeof ChannelModel>): ChannelView {
   return {
-    id: String(channel._id),
+    id: channel._id.toString(),
     name: channel.name,
     description: channel.description,
-    createdBy: String(channel.createdBy),
-    members: channel.members.map((m) => String(m)),
+    createdBy: channel.createdBy.toString(),
+    members: channel.members.map((m) => m.toString()),
     isArchived: channel.isArchived,
     createdAt: channel.createdAt,
     updatedAt: channel.updatedAt,
@@ -66,8 +66,8 @@ export async function createChannel(userId: string, input: CreateChannelInput): 
     isArchived: false,
   });
 
-  logger.info({ channelId: String(channel._id), userId }, 'Channel created');
-  await publishChannelEvent('channel.created', String(channel._id));
+  logger.info({ channelId: channel._id.toString(), userId }, 'Channel created');
+  await publishChannelEvent('channel.created', channel._id.toString());
   return toView(channel);
 }
 
@@ -76,7 +76,7 @@ export async function getChannelById(channelId: string, userId: string): Promise
   const channel = await ChannelModel.findById(channelId);
   if (!channel) throw Object.assign(new Error('Channel not found'), { code: 'NOT_FOUND' });
 
-  const isMember = channel.members.some((m) => String(m) === userId);
+  const isMember = channel.members.some((m) => m.toString() === userId);
   if (!isMember) throw Object.assign(new Error('Access denied'), { code: 'FORBIDDEN' });
 
   return toView(channel);
@@ -110,7 +110,9 @@ export async function listChannels(
   const hasNextPage = channels.length > clampedLimit;
   const items = hasNextPage ? channels.slice(0, clampedLimit) : channels;
   const last = items[items.length - 1];
-  const nextCursor = hasNextPage && last ? encodeCursor(last.createdAt, String(last._id)) : null;
+  const nextCursor = hasNextPage && last
+    ? encodeCursor(last.createdAt, last._id.toString())
+    : null;
 
   return { items: items.map(toView), nextCursor, hasNextPage };
 }
@@ -125,7 +127,7 @@ export async function updateChannel(
   const channel = await ChannelModel.findById(channelId);
   if (!channel) throw Object.assign(new Error('Channel not found'), { code: 'NOT_FOUND' });
 
-  const isMember = channel.members.some((m) => String(m) === userId);
+  const isMember = channel.members.some((m) => m.toString() === userId);
   if (!isMember) throw Object.assign(new Error('Access denied'), { code: 'FORBIDDEN' });
 
   if (input.isArchived !== undefined) {
@@ -159,10 +161,10 @@ export async function addMember(
   const channel = await ChannelModel.findById(channelId);
   if (!channel) throw Object.assign(new Error('Channel not found'), { code: 'NOT_FOUND' });
 
-  const isMember = channel.members.some((m) => String(m) === requesterId);
+  const isMember = channel.members.some((m) => m.toString() === requesterId);
   if (!isMember) throw Object.assign(new Error('Access denied'), { code: 'FORBIDDEN' });
 
-  const alreadyMember = channel.members.some((m) => String(m) === targetUserId);
+  const alreadyMember = channel.members.some((m) => m.toString() === targetUserId);
   if (alreadyMember) throw Object.assign(new Error('User is already a member'), { code: 'CONFLICT' });
 
   channel.members.push(new mongoose.Types.ObjectId(targetUserId) as unknown as (typeof channel.members)[number]);
@@ -187,7 +189,7 @@ export async function removeMember(
     requesterId === targetUserId || requesterRole === 'admin' || requesterRole === 'moderator';
   if (!canRemove) throw Object.assign(new Error('Insufficient permissions'), { code: 'FORBIDDEN' });
 
-  const memberIndex = channel.members.findIndex((m) => String(m) === targetUserId);
+  const memberIndex = channel.members.findIndex((m) => m.toString() === targetUserId);
   if (memberIndex === -1) throw Object.assign(new Error('User is not a member'), { code: 'NOT_FOUND' });
 
   channel.members.splice(memberIndex, 1);

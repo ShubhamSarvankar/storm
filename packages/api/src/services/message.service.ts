@@ -40,10 +40,10 @@ export interface MessageView {
 
 function toView(msg: InstanceType<typeof MessageModel>): MessageView {
   return {
-    id: String(msg._id),
+    id: msg._id.toString(),
     messageId: msg.messageId,
-    channelId: String(msg.channelId),
-    senderId: String(msg.senderId),
+    channelId: msg.channelId.toString(),
+    senderId: msg.senderId.toString(),
     deliveryStatus: msg.deliveryStatus,
     clientTs: msg.clientTs,
     createdAt: msg.createdAt,
@@ -56,11 +56,10 @@ export async function sendMessage(
   senderId: string,
   input: SendMessageInput,
 ): Promise<{ messageId: string; status: 'pending' | 'duplicate' }> {
-  // Verify membership
   const channel = await ChannelModel.findById(channelId);
   if (!channel) throw Object.assign(new Error('Channel not found'), { code: 'NOT_FOUND' });
 
-  const isMember = channel.members.some((m) => String(m) === senderId);
+  const isMember = channel.members.some((m) => m.toString() === senderId);
   if (!isMember) throw Object.assign(new Error('Access denied'), { code: 'FORBIDDEN' });
 
   // Idempotency check — if this messageId was already seen, treat as duplicate
@@ -83,7 +82,7 @@ export async function sendMessage(
   // Skip queue in test environment — Worker isn't running
   if (process.env['NODE_ENV'] !== 'test') {
     await getQueue().add(input.messageId, job, {
-      jobId: input.messageId, // BullMQ deduplicates by jobId
+      jobId: input.messageId,
     });
   }
 
@@ -101,7 +100,7 @@ export async function getMessageHistory(
   const channel = await ChannelModel.findById(channelId);
   if (!channel) throw Object.assign(new Error('Channel not found'), { code: 'NOT_FOUND' });
 
-  const isMember = channel.members.some((m) => String(m) === userId);
+  const isMember = channel.members.some((m) => m.toString() === userId);
   if (!isMember) throw Object.assign(new Error('Access denied'), { code: 'FORBIDDEN' });
 
   const clampedLimit = Math.min(Math.max(1, limit), PAGINATION_MAX_LIMIT);
@@ -125,7 +124,7 @@ export async function getMessageHistory(
   const items = hasNextPage ? messages.slice(0, clampedLimit) : messages;
   const last = items[items.length - 1];
   const nextCursor = hasNextPage && last
-    ? encodeCursor(last.createdAt, String(last._id))
+    ? encodeCursor(last.createdAt, last._id.toString())
     : null;
 
   return { items: items.map(toView), nextCursor, hasNextPage };
@@ -141,7 +140,7 @@ export async function deleteMessage(
   const message = await MessageModel.findOne({ messageId, channelId });
   if (!message) throw Object.assign(new Error('Message not found'), { code: 'NOT_FOUND' });
 
-  const isOwner = String(message.senderId) === requesterId;
+  const isOwner = message.senderId.toString() === requesterId;
   const canDeleteAny = requesterRole === 'admin' || requesterRole === 'moderator';
 
   if (!isOwner && !canDeleteAny) {

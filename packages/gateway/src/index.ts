@@ -23,7 +23,7 @@ wss.on('connection', (ws, req) => {
   void handleConnection(ws, req);
 });
 
-async function start(): Promise<void> {
+function start(): void {
   const redisUrl = process.env['REDIS_URL'];
   if (!redisUrl) throw new Error('REDIS_URL is not set');
 
@@ -34,20 +34,22 @@ async function start(): Promise<void> {
     logger.info({ port: PORT }, 'Gateway service ready');
   });
 
-  async function shutdown(signal: string): Promise<void> {
+  function shutdown(signal: string): void {
     logger.info({ signal }, 'Gateway shutting down');
 
-    wss.close(async () => {
-      server.close(async () => {
-        try {
-          await stopSubscriber();
-          await disconnectRedis();
-          logger.info('Gateway shutdown complete');
-        } catch (err) {
-          logger.error({ err }, 'Error during gateway shutdown');
-        } finally {
-          process.exit(0);
-        }
+    wss.close(() => {
+      server.close(() => {
+        void (async () => {
+          try {
+            await stopSubscriber();
+            await disconnectRedis();
+            logger.info('Gateway shutdown complete');
+          } catch (err) {
+            logger.error({ err }, 'Error during gateway shutdown');
+          } finally {
+            process.exit(0);
+          }
+        })();
       });
     });
 
@@ -61,7 +63,9 @@ async function start(): Promise<void> {
   process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 
-start().catch((err) => {
+try {
+  start();
+} catch (err) {
   logger.error({ err }, 'Gateway failed to start');
   process.exit(1);
-});
+}

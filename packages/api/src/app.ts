@@ -72,7 +72,6 @@ export function createApp(): express.Application {
   });
 
   // ── Global error handler ──────────────────────────────────
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
     const requestId = req.headers['x-request-id'] as string | undefined;
     logger.error({ err, requestId }, 'Unhandled error');

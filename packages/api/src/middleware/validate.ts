@@ -16,7 +16,7 @@ export function validate(schema: ZodSchema, target: Target = 'body') {
     }
     // Only reassign body — Express 5 query/params are read-only getters
     if (target === 'body') {
-      req[target] = result.data as Request[Target];
+      req.body = result.data as Record<string, unknown>;
     }
     next();
   };

@@ -8,7 +8,7 @@ import {
   type ChannelUpdatedEvent,
 } from '@storm/shared';
 import { getSessionsForChannel } from './connection-store.js';
-import { broadcast, sendToUser } from './sender.js';
+import { broadcast } from './sender.js';
 import { fanOutPresenceChange } from './handlers.js';
 
 const logger = createLogger('gateway-pubsub');

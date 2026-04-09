@@ -71,11 +71,7 @@ export function startMessageConsumer(redis: Redis): Worker {
     },
   );
 
-  // Default job options applied when the worker re-queues on failure are
-  // controlled by the producer. For dead-letter logic we rely on the
-  // 'failed' event which fires after all producer-specified attempts.
-
-  worker.on('failed', async (job, err) => {
+  worker.on('failed', (job, err) => {
     if (!job) return;
     const isExhausted = (job.attemptsMade ?? 0) >= MAX_ATTEMPTS;
     if (!isExhausted) return;
@@ -89,11 +85,11 @@ export function startMessageConsumer(redis: Redis): Worker {
       failedAt: Date.now(),
     };
 
-    await deadLetterQueue.add(job.data.messageId, deadLetter);
-    await MessageModel.updateOne(
+    void deadLetterQueue.add(job.data.messageId, deadLetter);
+    void MessageModel.updateOne(
       { messageId: job.data.messageId },
       { deliveryStatus: 'failed' },
-    ).catch(() => undefined); // non-fatal if doc doesn't exist yet
+    ).catch(() => undefined);
   });
 
   worker.on('error', (err) => logger.error({ err }, 'Worker error'));

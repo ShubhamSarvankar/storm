@@ -32,6 +32,10 @@ export default [
       '@typescript-eslint/no-unsafe-return': 'error',
       '@typescript-eslint/explicit-module-boundary-types': 'warn',
       'no-console': 'error',
+       // Mongoose ObjectId has a well-defined toString() — suppress false positives.
+       '@typescript-eslint/no-base-to-string': ['error', {
+         ignoredTypeNames: ['ObjectId'],
+       }],
       '@typescript-eslint/no-unused-vars': ['error', {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',
