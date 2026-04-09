@@ -20,9 +20,9 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "@vitest/coverage-v8": "^2.0.0",
+    "@vitest/coverage-v8": "^4.1.4",
     "pino-pretty": "^11.0.0",
-    "vitest": "^2.0.0"
+    "vitest": "^4.1.4"
   },
   "dependencies": {
     "ioredis": "^5.4.0",
