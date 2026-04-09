@@ -16,7 +16,7 @@ jobs:
         image: mongo:7
         env:
           MONGO_INITDB_ROOT_USERNAME: admin
-          MONGO_INITDB_ROOT_PASSWORD: testpassword
+          MONGO_INITDB_ROOT_PASSWORD: StormLocal2026!
           MONGO_INITDB_DATABASE: storm_test
         ports:
           - 27017:27017
@@ -39,8 +39,8 @@ jobs:
     env:
       NODE_ENV: test
       # MongoDB — used by shared, api, and worker tests
-      MONGO_URI: mongodb://admin:testpassword@localhost:27017/storm_test?authSource=admin
-      TEST_MONGO_URI: mongodb://admin:testpassword@localhost:27017/storm_test?authSource=admin
+      MONGO_URI: mongodb://admin:StormLocal2026!@localhost:27017/storm_test?authSource=admin
+      TEST_MONGO_URI: mongodb://admin:StormLocal2026!@localhost:27017/storm_test?authSource=admin
       # Redis — used by shared and worker tests
       REDIS_URL: redis://localhost:6379
       # JWT and encryption — required by shared unit tests and api integration tests
