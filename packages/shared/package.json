@@ -1,0 +1,33 @@
+{
+  "name": "@storm/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsc --project tsconfig.json --watch",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "pino-pretty": "^11.0.0",
+    "vitest": "^2.0.0"
+  },
+  "dependencies": {
+    "ioredis": "^5.4.0",
+    "mongoose": "^8.0.0",
+    "pino": "^9.0.0",
+    "zod": "^3.23.0"
+  }
+}

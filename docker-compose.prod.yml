@@ -1,0 +1,218 @@
+name: storm-prod
+
+services:
+
+  # ── TLS Certificate Init ──────────────────────────────────────
+  cert-init:
+    image: alpine/openssl
+    volumes:
+      - nginx_certs:/certs
+    # Idempotent: skips generation if cert already exists and is still valid (>1 day remaining)
+    entrypoint:
+      - sh
+      - -c
+      - |
+        if [ -f /certs/server.crt ] && openssl x509 -checkend 86400 -noout -in /certs/server.crt 2>/dev/null; then
+          echo 'cert-init: certificate exists and is valid, skipping generation'
+        else
+          echo 'cert-init: generating self-signed certificate'
+          openssl req -x509 -nodes -newkey rsa:2048 \
+            -days 365 \
+            -keyout /certs/server.key \
+            -out    /certs/server.crt \
+            -subj   '/CN=localhost' \
+            -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1'
+          echo 'cert-init: done'
+        fi
+    networks: []   # no network access needed
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          memory: 32m
+          cpus: "0.1"
+
+  # ── Infrastructure ─────────────────────────────────────────────
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: storm
+    volumes:
+      - mongo_data:/data/db
+    # No host port exposure in production
+    networks:
+      - storm_net
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
+        reservations:
+          memory: 256m
+          cpus: "0.25"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    # No host port exposure in production
+    networks:
+      - storm_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.5"
+        reservations:
+          memory: 64m
+          cpus: "0.1"
+
+  # ── Application Services ────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+    networks:
+      - storm_net
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+        reservations:
+          memory: 128m
+          cpus: "0.1"
+
+  gateway:
+    build:
+      context: .
+      dockerfile: packages/gateway/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PORT: 3001
+      NODE_ENV: production
+    networks:
+      - storm_net
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+        reservations:
+          memory: 128m
+          cpus: "0.1"
+
+  worker:
+    build:
+      context: .
+      dockerfile: packages/worker/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+    networks:
+      - storm_net
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('fs').statSync('/tmp/worker-healthy')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+        reservations:
+          memory: 128m
+          cpus: "0.1"
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - nginx_certs:/etc/nginx/certs:ro
+    networks:
+      - storm_net
+    depends_on:
+      cert-init:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "--no-check-certificate", "https://localhost/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 64m
+          cpus: "0.25"
+        reservations:
+          memory: 32m
+          cpus: "0.05"
+
+# ── Volumes & Networks ─────────────────────────────────────────
+volumes:
+  mongo_data:
+  redis_data:
+  nginx_certs:
+
+networks:
+  storm_net:
+    driver: bridge
