@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: Lint · Test · Build
+    runs-on: ubuntu-latest
+
+    services:
+      mongo:
+        image: mongo:7
+        env:
+          MONGO_INITDB_ROOT_USERNAME: admin
+          MONGO_INITDB_ROOT_PASSWORD: testpassword
+          MONGO_INITDB_DATABASE: storm_test
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval \"db.adminCommand('ping').ok\""
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      # MongoDB — used by shared, api, and worker tests
+      MONGO_URI: mongodb://admin:testpassword@localhost:27017/storm_test?authSource=admin
+      TEST_MONGO_URI: mongodb://admin:testpassword@localhost:27017/storm_test?authSource=admin
+      # Redis — used by shared and worker tests
+      REDIS_URL: redis://localhost:6379
+      # JWT and encryption — required by shared unit tests and api integration tests
+      JWT_SECRET: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      MESSAGE_ENCRYPTION_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build --workspace=packages/shared
+
+      - name: Lint — shared
+        run: npm run lint --workspace=packages/shared
+
+      - name: Lint — api
+        run: npm run lint --workspace=packages/api
+
+      - name: Lint — gateway
+        run: npm run lint --workspace=packages/gateway
+
+      - name: Lint — worker
+        run: npm run lint --workspace=packages/worker
+
+      - name: Test — shared
+        run: npm run test:coverage --workspace=packages/shared
+
+      - name: Test — api
+        run: npm run test:coverage --workspace=packages/api
+
+      - name: Test — gateway
+        run: npm run test:coverage --workspace=packages/gateway
+
+      - name: Test — worker
+        run: npm run test:coverage --workspace=packages/worker
+
+      - name: Build — api
+        run: npm run build --workspace=packages/api
+
+      - name: Build — gateway
+        run: npm run build --workspace=packages/gateway
+
+      - name: Build — worker
+        run: npm run build --workspace=packages/worker
